@@ -13,7 +13,9 @@ import yaml
 import glob
 import copy
 from collections import OrderedDict
+from pluralizer import Pluralizer
 
+pluralizer = Pluralizer()
 
 def scope(func):
     func.scope = True
@@ -35,6 +37,7 @@ class RB(object):
             module_map.update(yaml.load(f, Loader=yaml.FullLoader))
 
     sqlalchemy_model="db.Model"
+    rails_model = "ApplicationRecord"
 
     using_map = {
         "EnumerableEx": False,
@@ -681,7 +684,9 @@ class RB(object):
         self._functions_rb_args_default = {}
         self._class_functions = []
         self._class_variables = []
-        self._class_self_variables = []
+        self._class_self_variables = []#martin: second class would loose the context?
+        self._class_sqlalchemy_props={}
+        self._class_sqlalchemy_props[node.name] = [] #martin: should all initializers go into constructor of self?
         self._self_functions_args = {}
         self._class_functions_args = {}
 
@@ -724,6 +729,9 @@ class RB(object):
         self._classes_base_classes[node.name] = base_classes
         if self.sqlalchemy_model in base_classes:
             node.is_sqlalchemy=True
+            base_rclasses = [x.replace(self.sqlalchemy_model, self.rails_model) for x in base_rclasses]
+            base_classes = [x.replace(self.sqlalchemy_model, self.rails_model) for x in base_classes]
+            self._classes_base_classes[node.name] = [x.replace(self.sqlalchemy_model, self.rails_model) for x in self._classes_base_classes[node.name]]
         # [Inherited Class Name] <Python> class foo(bar) => <Ruby> class Foo < Bar
         bases = [cls[0].upper() + cls[1:] for cls in base_rclasses]
 
@@ -797,15 +805,22 @@ class RB(object):
                     var = self.visit(t)
                     if node.is_sqlalchemy:
                         if isinstance(stmt.value, ast.Call) and stmt.value.func.id == "Column":
+                            self._class_sqlalchemy_props[node.name] += (var,)
                             self.write("#%s = %s" % (var, value))
                             
                         if isinstance( stmt.value , ast.Call) and stmt.value.func.id == "relationship":
                             if "back_populates" in [x.arg for x in stmt.value.keywords]:
-                                result = self.construct_has_many(stmt.value)
-                                self.write(f"belongs_to {result}")
+                                child_class,rest = self.construct_has_many(stmt.value)
+                                if child_class+"_id" in self._class_sqlalchemy_props[node.name]:
+                                #bidi case
+                                    child_class = pluralizer.plural(child_class) if child_class else ""
+                                    self.write(f"has_many :{child_class}, {rest}")
+                                else:
+                                    self.write(f"belongs_to: {child_class}, {rest}")
                             else:
-                                result = self.construct_has_many(stmt.value)
-                                self.write(f"has_many {result}")
+                                child_class,rest = self.construct_has_many(stmt.value)
+                                child_class = pluralizer.plural(child_class) if child_class else ""
+                                self.write(f"has_many :{child_class}, {rest}")
 
                     else:
                         self.write("@@%s = %s" % (var, value))
@@ -856,14 +871,15 @@ class RB(object):
 
     def construct_has_many(self, node):
         keywords =[]
-        for kw in node.keywords:
+        child_class= node.args[0].value.lower()
+        for kw in node.keywords[1:]:
             if kw.arg == "back_populates":
                 continue
             keywords.append("%s: %s" % (kw.arg, self.visit(kw.value)))
             self._conv = False
             keywords.append("%s: %s" % (kw.arg, self.visit(kw.value)))
             self._conv = True
-        return f":{node.args[0].value.lower()}, {', '.join(keywords)}"
+        return child_class,f"{', '.join(keywords)}"
 
     def visit_Return(self, node):
         if node.value is not None:

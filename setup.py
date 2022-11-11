@@ -44,6 +44,7 @@ setup(
     install_requires=[
         'pyyaml',
         'numpy',
+        'pluralizer @ git+https://github.com/weixu365/pluralizer-py.git#egg=pluralizer-v1.2.0',
     ],
     entry_points={
         'console_scripts': [

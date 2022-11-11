@@ -1,0 +1,15 @@
+
+require 'module'
+
+using PythonPrintEx
+using PythonStringCountEx
+
+db = SQLAlchemy()
+class Parent < ApplicationRecord
+  #id = Column(Integer, primary_key: true)
+  has_many :children, 
+end
+class Child < ApplicationRecord
+  #id = Column(Integer, primary_key: true)
+  #parent_id = Column(Integer, ForeignKey("parent_table.id"))
+end

@@ -6,13 +6,13 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
-class Parent(Base):
+class Parent(db.Model):
     __tablename__ = "parent_table"
     id = Column(Integer, primary_key=True)
     children = relationship("Child", back_populates="parent")
 
 
-class Child(Base):
+class Child(db.Model):
     __tablename__ = "child_table"
     id = Column(Integer, primary_key=True)
     parent_id = Column(Integer, ForeignKey("parent_table.id"))
