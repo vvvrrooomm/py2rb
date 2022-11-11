@@ -83,6 +83,61 @@ def compile_file_test(file_path, file_name=None):
     return CompileFile
 
 
+def compile_file_compare_test(file_path, file_name=None):
+    """a test that compiles python and compares produced ruby"""
+    file_name = file_name if file_name else file_path
+    
+    class CompileCompareFile(unittest.TestCase):
+        """Test if compiled python matches static ruby."""
+        name_path, ext = os.path.splitext(file_path)
+        templ = {
+            "py_path": file_path, 
+            "py_dir_path": os.path.dirname(file_path),
+            "py_unix_path": get_posix_path(file_path), 
+            "py_out_path": file_path + ".out",
+            "py_error": file_path + ".err",
+            "rb_path": name_path + ".rb",
+            "rb_expected_path": name_path + ".rb.expected",
+            "name": file_name,
+            "compiler_error": file_path + ".comp.err",
+        }
+        def reportProgres(self):
+            """Should be overloaded by the test result class"""
+
+        def runTest(self):
+            """The actual test goes here."""
+            commands = []
+            commands.append(
+                (
+                'python "%(py_path)s" > '
+                '"%(py_out_path)s" 2> "%(py_error)s"'
+                ) % self.templ,
+              )
+            compile_command = (
+                'python py2rb.py -p "%(py_dir_path)s" -r "%(py_path)s" -m -f -w -s 2> "%(compiler_error)s"'
+                ) % self.templ
+            commands.append(compile_command)
+
+            for cmd in commands:
+                self.assertEqual(0, os.system(cmd))
+                self.reportProgres()
+                       # Partial Match
+            if os.path.exists(self.templ["rb_expected_path"]):
+                # Fixed statement partial match
+                f = open(self.templ["rb_expected_path"])
+                g = open(self.templ["rb_path"])
+                self.assertIn(
+                    f.read(),
+                    g.read()
+                    )
+                f.close()
+                g.close()
+            else:
+                self.fail(f"file not found {self.templ['rb_expected_path']}")
+            self.reportProgres()
+        def __str__(self):
+            return "%(py_unix_path)s [1]: " % self.templ
+    return CompileCompareFile
 
 
 def compile_and_run_file_test(file_path, file_name=None):

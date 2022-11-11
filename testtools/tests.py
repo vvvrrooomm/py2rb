@@ -1,6 +1,7 @@
 """module which finds tests from the test directory and converts them to
 the unittest framework classes."""
 
+import pathlib
 import testtools.env_tests as env_tests
 import testtools.known_to_fail as known_to_fail
 import testtools.util as util
@@ -43,18 +44,9 @@ def create_cases():
     test_paths.sort()
     for test_path in test_paths:
         if (
-            test_path.replace("\\","/") not 
+            test_path.replace("\\","/")  
             in known_to_fail.KNOWN_TO_FAIL
             ):
-            test_cases.addTest(
-                unittest.TestLoader().loadTestsFromTestCase(
-                    util.compile_and_run_file_test(
-                        test_path, 
-                        os.path.basename(test_path)
-                        )
-                    )
-                )
-        else:
             failing_test_cases.addTest(
                 unittest.TestLoader().loadTestsFromTestCase(
                     util.compile_and_run_file_failing_test(
@@ -63,6 +55,25 @@ def create_cases():
                         )
                     )
                 )
+        elif os.path.exists(pathlib.Path(test_path).with_suffix(".rb.expected")):
+            test_cases.addTest(
+                unittest.TestLoader().loadTestsFromTestCase(
+                    util.compile_file_compare_test(
+                        test_path, 
+                        os.path.basename(test_path)
+                        )
+                    )
+                )
+        else:
+            test_cases.addTest(
+                unittest.TestLoader().loadTestsFromTestCase(
+                    util.compile_and_run_file_test(
+                        test_path, 
+                        os.path.basename(test_path)
+                        )
+                    )
+                )
+            
     return test_cases , failing_test_cases
 
 NOT_KNOWN_TO_FAIL, KNOWN_TO_FAIL = create_cases()
