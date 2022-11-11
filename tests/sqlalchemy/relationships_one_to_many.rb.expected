@@ -7,7 +7,7 @@ using PythonStringCountEx
 db = SQLAlchemy()
 class Parent < ApplicationRecord
   #id = Column(Integer, primary_key: true)
-  has_many :children, 
+  has_many :children #
 end
 class Child < ApplicationRecord
   #id = Column(Integer, primary_key: true)

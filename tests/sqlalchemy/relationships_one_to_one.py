@@ -5,7 +5,11 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-
+# in sqlalchemy only exists as bidirectional version:
+# One To One is essentially a bidirectional relationship with a scalar 
+# attribute on both sides. Within the ORM, “one-to-one” is considered 
+# as a convention where the ORM expects that only one related row will 
+# exist for any parent row.
 class Parent(db.Model):
     __tablename__ = "parent_table"
     id = Column(Integer, primary_key=True)

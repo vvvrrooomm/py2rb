@@ -809,18 +809,29 @@ class RB(object):
                             self.write("#%s = %s" % (var, value))
                             
                         if isinstance( stmt.value , ast.Call) and stmt.value.func.id == "relationship":
-                            if "back_populates" in [x.arg for x in stmt.value.keywords]:
-                                child_class,rest = self.construct_has_many(stmt.value)
-                                if child_class+"_id" in self._class_sqlalchemy_props[node.name]:
+                            child_class,rest = self.construct_has_many(stmt.value)
+                            #statement is 'relationship'
+                            if child_class+"_id" in self._class_sqlalchemy_props[node.name]:
+                                if "back_populates" in [x.arg for x in stmt.value.keywords]:
                                 #bidi case
                                     child_class = pluralizer.plural(child_class) if child_class else ""
-                                    self.write(f"has_many :{child_class}, {rest}")
+                                    self.write(f"has_many :{child_class} #{rest}")
+                                elif "uselist" in [x.arg for x in stmt.value.keywords] and stmt.value.keywords["uselist"].value == False :
+                                    child_class = pluralizer.plural(child_class) if child_class else ""
+                                    self.write(f"has_many :{child_class} #{rest}")
                                 else:
-                                    self.write(f"belongs_to: {child_class}, {rest}")
-                            else:
-                                child_class,rest = self.construct_has_many(stmt.value)
-                                child_class = pluralizer.plural(child_class) if child_class else ""
-                                self.write(f"has_many :{child_class}, {rest}")
+                                    self.write(f"belongs_to :{child_class} #{rest}")
+                            else:    
+                                child_class_singular = pluralizer.singular(child_class) if child_class else ""
+                                if "back_populates" not in [x.arg for x in stmt.value.keywords]:
+                                #bidi case
+                                    child_class = pluralizer.plural(child_class) if child_class else ""
+                                    self.write(f"has_many :{child_class} #{rest}")
+                                    # if child_class_singular+"_id" in self._class_sqlalchemy_props[node.name]:
+                                    #     self.write(f"has_one :{child_class_singular} #{rest}")
+                                else:
+                                    self.write(f"belongs_to :{child_class_singular} #{rest}")
+
 
                     else:
                         self.write("@@%s = %s" % (var, value))
@@ -877,8 +888,8 @@ class RB(object):
                 continue
             keywords.append("%s: %s" % (kw.arg, self.visit(kw.value)))
             self._conv = False
-            keywords.append("%s: %s" % (kw.arg, self.visit(kw.value)))
-            self._conv = True
+            # keywords.append("%s: %s" % (kw.arg, self.visit(kw.value)))
+            # self._conv = True
         return child_class,f"{', '.join(keywords)}"
 
     def visit_Return(self, node):
