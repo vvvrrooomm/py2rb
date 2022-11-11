@@ -816,14 +816,14 @@ class RB(object):
                                 #bidi case
                                     child_class = pluralizer.plural(child_class) if child_class else ""
                                     self.write(f"has_many :{child_class} #{rest}")
-                                elif "uselist" in [x.arg for x in stmt.value.keywords] and stmt.value.keywords["uselist"].value == False :
+                                elif self.get_keyword(stmt,"uselist") and self.get_keyword(stmt,"uselist").value == False :
                                     child_class = pluralizer.plural(child_class) if child_class else ""
                                     self.write(f"has_many :{child_class} #{rest}")
                                 else:
                                     self.write(f"belongs_to :{child_class} #{rest}")
                             else:    
                                 child_class_singular = pluralizer.singular(child_class) if child_class else ""
-                                if "back_populates" not in [x.arg for x in stmt.value.keywords]:
+                                if self.get_keyword(stmt,"back_populates") is None:
                                 #bidi case
                                     child_class = pluralizer.plural(child_class) if child_class else ""
                                     self.write(f"has_many :{child_class} #{rest}")
@@ -880,6 +880,11 @@ class RB(object):
         self._class_variables = []
         self._class_self_variables = []
 
+    def get_keyword(self,stmt,keyword):
+        for x in stmt.value.keywords:
+            if x.arg == keyword:
+                return x
+        return None
     def construct_has_many(self, node):
         keywords =[]
         child_class= node.args[0].value.lower()
