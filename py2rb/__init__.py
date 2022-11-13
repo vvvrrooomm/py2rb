@@ -815,6 +815,7 @@ class RB(object):
                                 if "back_populates" in [x.arg for x in stmt.value.keywords]:
                                 #bidi case
                                     child_class = pluralizer.plural(child_class) if child_class else ""
+                                    self.write(f"#ToDo: could be a one-to-one. check if `has_one` was meant")
                                     self.write(f"has_many :{child_class} #{rest}")
                                 elif self.get_keyword(stmt,"uselist") and self.get_keyword(stmt,"uselist").value == False :
                                     child_class = pluralizer.plural(child_class) if child_class else ""

@@ -9,6 +9,7 @@ db = SQLAlchemy()
 class Parent < ApplicationRecord
   #id = Column(Integer, primary_key: true)
   #child_id = Column(Integer, ForeignKey("child_table.id"))
+  #ToDo: could be a one-to-one. check if `has_one` was meant
   has_many :children #
 end
 class Child < ApplicationRecord
