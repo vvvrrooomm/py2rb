@@ -3232,7 +3232,16 @@ def main():
         default=False,
         help="store py2rb/builtins/module.rb library file in the specified directory",
     )
-
+    
+    parser.add_option(
+        "-o",
+        "--out-dir",
+        action="store",
+        dest="out_dir",
+        default=False,
+        help="output dir",
+    )
+    
     options, args = parser.parse_args()
 
     if options.store_library_path:
@@ -3387,8 +3396,16 @@ def main():
                 continue
         subfilenames = set(subfilenames)
         if options.output:
-            name_path, ext = os.path.splitext(py_path)
-            output = name_path + ".rb"
+            if options.out_dir:
+                import pathlib
+                p = pathlib.PurePath(py_path)
+                rel = p.relative_to(options.base_path)
+                name_path = pathlib.Path(options.out_dir) / rel
+                output = name_path.with_suffix(".rb")
+                output.parent.mkdir(parents=True,exist_ok=True)
+            else:
+                name_path, ext = os.path.splitext(py_path)
+                output = name_path + ".rb"
         else:
             output = None
 
