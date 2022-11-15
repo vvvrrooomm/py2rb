@@ -549,8 +549,10 @@ class RB(object):
         if self._class_name:
             if not is_static and not is_closure:
                 if not (rb_args[0] == "self"):
-                    raise NotImplementedError("The first argument must be 'self'.")
-                del rb_args[0]
+                    Warning("The first argument should be 'self'.")
+                    pass
+                else:
+                    del rb_args[0]
                 del rb_args_default[0]
 
         if "__init__" == node.name:
