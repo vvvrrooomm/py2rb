@@ -3312,7 +3312,7 @@ def main():
         dir_path = os.path.relpath(dir_path, base_dir_path)
         with open(py_path, "r") as f:
             text = f.read()
-            results_f = re.findall(r"^from +([.\w]+) +import +([*\w]+)", text, re.M)
+            results_f = re.findall(r"^\s*from +([.\w]+) +import +([*\w]+)", text, re.M)
             for res_f in results_f:
                 if options.verbose:
                     print("py_path: %s res_f: %s" % (py_path, ", ".join(res_f)))
@@ -3345,7 +3345,7 @@ def main():
                         res = os.path.normpath(os.path.join(res_f[0], res_f[1]))
                     if res not in results:
                         results.append(res)
-            results_f = re.findall(r"^import +([.\w]+)", text, re.M)
+            results_f = re.findall(r"^\s*import +([.\w]+)", text, re.M)
             for res_f in results_f:
                 # from modules.moda import ModA
                 # => (tests/modules/) modules/moda.py  # => class ModA
