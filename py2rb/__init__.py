@@ -868,6 +868,10 @@ class RB(object):
             self.write("def %s; @%s = @@%s if @%s.nil?; @%s; end" % (v, v, v, v, v))
             self.write("def %s=(val); @%s=val; end" % (v, v))
 
+        for instance_var in self._class_self_variables:
+            if not instance_var.startswith("_"):
+                self.write(f"attr_accessor :{instance_var}")
+
         for func in self._self_functions:
             if func in self.attribute_map.keys():
                 self.write("alias :%s :%s" % (self.attribute_map[func], func))
