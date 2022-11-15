@@ -2905,6 +2905,9 @@ class RB(object):
         for k, v in zip(node.keys, node.values):
             if isinstance(k, ast.Name):
                 els.append('"%s" => %s' % (self.visit(k), self.visit(v)))
+            elif k is None: #dict unpacking, e.g.: {**another_dict}
+                    value = self.visit(v)
+                    els.append(f"**{value}")
             else:  # ast.Str, ast.Num
                 if self._dict_format == True:  # ast.Str
                     els.append("%s: %s" % (self.visit(k), self.visit(v)))
