@@ -608,6 +608,7 @@ class RB(object):
                 # self.write("def self.%s=(%s)" % (func_name, rb_args))
             # else:
             #    self.write("def %s=(%s)" % (func_name, rb_args))
+            self.write("")#newline
             self.write("def %s=(%s)" % (func_name, rb_args))
         elif is_closure:
             """[function closure] :
@@ -632,6 +633,7 @@ class RB(object):
                 # self.write("def self.%s(%s)" % (func_name, rb_args))
             # else:
             #    self.write("def %s(%s)" % (func_name, rb_args))
+            self.write("")#newline
             self.write("def %s(%s)" % (func_name, rb_args))
 
         if self._class_name is None:
@@ -747,6 +749,7 @@ class RB(object):
         rclass_name = class_name[0].upper() + class_name[1:]
         if self._verbose:
             print("ClassDef class_name[%s] bases: %s" % (node.name, bases))
+        self.write("\n")
         if len(bases) == 0:
             self.write("class %s" % (rclass_name))
         elif len(bases) == 1:
@@ -776,6 +779,7 @@ class RB(object):
                 else:
                     self._self_functions.append(stmt.name)
         if len(self._class_functions) != 0:
+            self.write("")#newline
             self.write("def method_missing(method, *args)")
             self.indent()
             self.write("self.class.__send__ method, *args")
