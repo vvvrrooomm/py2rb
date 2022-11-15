@@ -886,6 +886,21 @@ class RB(object):
             if x.arg == keyword:
                 return x
         return None
+    def visit_JoinedStr(self, node):
+        result=[]
+        for arg in node.values:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value,str):
+                result+=(arg.value,)
+            else:
+                el = self.visit(arg)
+                result+=(el,)
+        
+        return '"'+"".join(result)+'"'
+
+    def visit_FormattedValue(self,node):
+        child = self.visit(node.value)
+        return f"#{{{child}}}"
+
     def construct_has_many(self, node):
         keywords =[]
         child_class= node.args[0].value.lower()
