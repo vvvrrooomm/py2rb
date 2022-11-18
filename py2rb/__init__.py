@@ -316,6 +316,7 @@ class RB(object):
         # Ruby class name (first charcer Capitalize)
         self._rclass_names = set()
         self._classes = {}
+        self._classes_sqlalchemy_model = set()
 
         # This lists all inherited class names:
         self._classes_base_classes = {}
@@ -493,6 +494,8 @@ class RB(object):
                                          @_x=val
                                      end
                             """
+                    if isinstance(decorator,ast.Call) and decorator.func.id == "validates" and self._class_name in self.sqlalchemy_model:
+                        pass                        
                 if not is_static and not is_property and not is_setter:
                     if self._mode == 1:
                         self.set_result(1)
@@ -733,9 +736,12 @@ class RB(object):
         self._classes_base_classes[node.name] = base_classes
         if self.sqlalchemy_model in base_classes:
             node.is_sqlalchemy=True
+            self._classes_sqlalchemy_model.add( self._class_name)
             base_rclasses = [x.replace(self.sqlalchemy_model, self.rails_model) for x in base_rclasses]
             base_classes = [x.replace(self.sqlalchemy_model, self.rails_model) for x in base_classes]
             self._classes_base_classes[node.name] = [x.replace(self.sqlalchemy_model, self.rails_model) for x in self._classes_base_classes[node.name]]
+        else:
+            node.is_sqlalchemy=False
         # [Inherited Class Name] <Python> class foo(bar) => <Ruby> class Foo < Bar
         bases = [cls[0].upper() + cls[1:] for cls in base_rclasses]
 
@@ -810,10 +816,15 @@ class RB(object):
                 for t in stmt.targets:
                     var = self.visit(t)
                     if node.is_sqlalchemy:
-                        if isinstance(stmt.value, ast.Call) and stmt.value.func.id == "Column":
+                        # direct definition 
+                        if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Call) and stmt.value.func.id == "Column":
                             self._class_sqlalchemy_props[node.name] += (var,)
                             self.write("#%s = %s" % (var, value))
-                            
+                        # # namespaced sqlalchemy objects, accessed via sqlalchemy object, eg: `db=SlqAlchemy(); db.Column(db.String())`
+                        # if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Attribute) and stmt.value.func.attr == "Column":
+                        #     self._class_sqlalchemy_props[node.name] += (var,)
+                        #     self.write("#%s = %s" % (var, value))
+                        
                         if isinstance( stmt.value , ast.Call) and stmt.value.func.id == "relationship":
                             child_class,rest = self.construct_has_many(stmt.value)
                             #statement is 'relationship'
@@ -874,7 +885,7 @@ class RB(object):
             self.write("def %s; @%s = @@%s if @%s.nil?; @%s; end" % (v, v, v, v, v))
             self.write("def %s=(val); @%s=val; end" % (v, v))
 
-        for instance_var in self._class_self_variables:
+        for instance_var in set(self._class_self_variables): #unique only
             if not instance_var.startswith("_"):
                 self.write(f"attr_accessor :{instance_var}")
 

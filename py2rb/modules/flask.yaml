@@ -6,3 +6,6 @@ sqlalchemy:
   dummy:
 sqlalchemy.orm:
   dummy:
+# inventory:
+#   ldap_adapter:
+#     dummy:
