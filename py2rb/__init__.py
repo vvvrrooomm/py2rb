@@ -392,7 +392,8 @@ class RB(object):
                 "Name",
                 "Attribute",
             ]:
-                return ""
+                pass
+                #return ""
 
         try:
             visitor = getattr(self, "visit_" + self.name(node))
@@ -514,6 +515,10 @@ class RB(object):
                             is_static = True
                     if isinstance(decorator, ast.Call):
                         if decorator.func.value.id in self.blueprints:
+                            controller_name = pluralizer.singular(decorator.func.value.id)
+                            controller_ast = self.build_class(controller_name,"ActionController")
+                            pass
+                            # set class to synthetic actioncontroller
                             # issue asclass method. potentially create class for controller
         defaults = [None] * (
             len(node.args.args) - len(node.args.defaults)
@@ -693,6 +698,9 @@ class RB(object):
 
         self._function.pop()
         self._function_args = []
+
+    def build_class(self,controller,parent):
+        s= ast.ClassDef(name=controller, bases=[parent])
 
     @scope
     def visit_ClassDef(self, node):
@@ -1065,7 +1073,7 @@ class RB(object):
                         if node.value.func.id == "Blueprint":
                             blueprint = node.value
                             self.blueprints[var]={'name':blueprint.args[0].value,
-                            "args":[visit(x) for x in blueprint.args[1:]]
+                            "args":[self.visit(x) for x in blueprint.args[1:]]
                             }
                         #     # base_classes = self._classes_base_classes[node.value.func.id]
                         #     # if self.sqlalchemy_model in base_classes:
