@@ -37,6 +37,7 @@ class RB(object):
             module_map.update(yaml.load(f, Loader=yaml.FullLoader))
 
     sqlalchemy_model="db.Model"
+    api_path="api/"
     rails_model = "ApplicationRecord"
 
     using_map = {
@@ -132,6 +133,8 @@ class RB(object):
     mod_class_name = {}
     order_inherited_methods = {}
 
+    models={}
+    blueprints={}
     # float(foo) => foo.to_f
     reverse_methods = {
         "type": "class",
@@ -300,7 +303,8 @@ class RB(object):
         self._class_name = None
         # This is the name of the ruby class that we are currently in:
         self._rclass_name = None
-
+        self._is_controller = False
+        self._rfile_name = None
         # This is use () case of the tuple that we are currently in:
         self._tuple_type = "[]"  # '()' : "(a, b)" , '[]' : "[a, b]", '=>': "%s => %s" (Hash), '': 'a, b'
         self._func_args_len = 0
@@ -503,7 +507,14 @@ class RB(object):
                             "Warning : decorators are not supported : %s\n"
                             % self.visit(node.decorator_list[0])
                         )
-
+            else:
+                for decorator in node.decorator_list:
+                    if isinstance(decorator, ast.Name):
+                        if decorator.id == "classmethod":
+                            is_static = True
+                    if isinstance(decorator, ast.Call):
+                        if decorator.func.value.id in self.blueprints:
+                            # issue asclass method. potentially create class for controller
         defaults = [None] * (
             len(node.args.args) - len(node.args.defaults)
         ) + node.args.defaults
@@ -633,13 +644,14 @@ class RB(object):
                 self.write("%s = lambda do |%s|" % (func_name, rb_args))
             self._lambda_functions.append(func_name)
         else:
+            self.write("")#newline
             if self._is_module and not self._class_name:
                 self._module_functions.append(func_name)
-                # self.write("def self.%s(%s)" % (func_name, rb_args))
-            # else:
-            #    self.write("def %s(%s)" % (func_name, rb_args))
-            self.write("")#newline
-            self.write("def %s(%s)" % (func_name, rb_args))
+                self.write("def self.%s(%s)" % (func_name, rb_args))
+            else:
+               self.write("def %s(%s)" % (func_name, rb_args))
+
+            
 
         if self._class_name is None:
             #
@@ -748,6 +760,8 @@ class RB(object):
         if not bases:
             bases = []
 
+        # if self.filename.contains(self.api_path):
+        #     self._is_controller=True
         # self._classes remembers all classes defined
         self._classes[node.name] = node
         self._class_names.add(node.name)
@@ -817,7 +831,7 @@ class RB(object):
                     var = self.visit(t)
                     if node.is_sqlalchemy:
                         # direct definition 
-                        if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Call) and stmt.value.func.id == "Column":
+                        if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Name) and stmt.value.func.id == "Column":
                             self._class_sqlalchemy_props[node.name] += (var,)
                             self.write("#%s = %s" % (var, value))
                         # # namespaced sqlalchemy objects, accessed via sqlalchemy object, eg: `db=SlqAlchemy(); db.Column(db.String())`
@@ -825,7 +839,7 @@ class RB(object):
                         #     self._class_sqlalchemy_props[node.name] += (var,)
                         #     self.write("#%s = %s" % (var, value))
                         
-                        if isinstance( stmt.value , ast.Call) and stmt.value.func.id == "relationship":
+                        if isinstance( stmt.value , ast.Call) and isinstance( stmt.value.func , ast.Name) and stmt.value.func.id == "relationship":
                             child_class,rest = self.construct_has_many(stmt.value)
                             #statement is 'relationship'
                             if child_class+"_id" in self._class_sqlalchemy_props[node.name]:
@@ -1046,10 +1060,13 @@ class RB(object):
                 var = self.visit(target)
                 if not (var in self._scope):
                     self._scope.append(var)
-                #if isinstance(node.value, ast.Call):
-                    #if isinstance(node.value.func, ast.Name):
-                        #martin : not needed
-                        # if node.value.func.id in self._class_names:
+                if isinstance(node.value, ast.Call):
+                    if isinstance(node.value.func, ast.Name):
+                        if node.value.func.id == "Blueprint":
+                            blueprint = node.value
+                            self.blueprints[var]={'name':blueprint.args[0].value,
+                            "args":[visit(x) for x in blueprint.args[1:]]
+                            }
                         #     # base_classes = self._classes_base_classes[node.value.func.id]
                         #     # if self.sqlalchemy_model in base_classes:
                                 
@@ -3081,6 +3098,11 @@ def convert_py2rb(
 
     # convert target file
     t = ast.parse(s)
+    # martin: add mode-2 round to establish context
+    v.mode(2)
+    v.visit(t)
+    v.clear()
+    
     if no_stop:
         v.mode(1)
     else:
