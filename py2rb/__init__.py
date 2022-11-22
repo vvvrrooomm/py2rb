@@ -898,7 +898,8 @@ class RB(object):
 
 
                     else:
-                        self.write("@@%s = %s" % (var, value))
+                        #emitted as instance variables
+                        self.write("%s = %s" % (var, value))
                         self._class_variables.append(var)
             else:
                 self.visit(stmt)
@@ -924,14 +925,9 @@ class RB(object):
         self._class_name = None
         self._rclass_name = None
 
-        #martin: needed?
-        for v in self._class_variables:
-            self.write("def self.%s; @@%s; end" % (v, v))
-            self.write("def self.%s=(val); @@%s=val; end" % (v, v))
-            self.write("def %s; @%s = @@%s if @%s.nil?; @%s; end" % (v, v, v, v, v))
-            self.write("def %s=(val); @%s=val; end" % (v, v))
-
-        for instance_var in set(self._class_self_variables): #unique only
+        #both instance and class variables are emitted as instance variables
+        #for compatiblity with python they are made accessible for read&write
+        for instance_var in set(self._class_self_variables + self._class_variables): #unique only
             if not instance_var.startswith("_"):
                 self.write(f"attr_accessor :{instance_var}")
 
