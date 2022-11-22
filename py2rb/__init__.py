@@ -490,13 +490,15 @@ class RB(object):
                                          @_x
                                      end
                             """
+                        
                         else:
-                            if self._mode == 1:
-                                self.set_result(1)
-                                sys.stderr.write(
-                                    "Warning : decorators are not supported : %s\n"
-                                    % self.visit(decorator.id)
-                                )
+                            # if self._mode == 1:
+                            #     self.set_result(1)
+                            #     sys.stderr.write(
+                            #          "Warning : decorators are not supported : %s\n"
+                            #         % self.visit(decorator.id)
+                            #     )
+                            pass 
                     if isinstance(decorator, ast.Attribute):
                         if self.visit(node.decorator_list[0]) == (
                             node.name + ".setter"
@@ -519,12 +521,13 @@ class RB(object):
                             node.args.args.insert(0,ast.arg(arg="self"))#inject self, this free method is treated as class methond within blueprint.
                         # without self it is mis-detected as lambda                   
                 if not is_static and not is_property and not is_setter:
-                    if self._mode == 1:
-                        self.set_result(1)
-                        sys.stderr.write(
-                            "Warning : decorators are not supported : %s\n"
-                            % self.visit(node.decorator_list[0])
-                        )
+                    # if self._mode == 1:
+                    #     self.set_result(1)
+                    #     sys.stderr.write(
+                    #         "Warning : decorators are not supported : %s\n"
+                    #         % self.visit(node.decorator_list[0])
+                    #     )
+                    self.write("\n#@%s" % self.visit(decorator), newline=False)
             else:
                 for decorator in node.decorator_list:
                     if isinstance(decorator, ast.Name):
@@ -648,7 +651,7 @@ class RB(object):
             #    self.write("def %s=(%s)" % (func_name, rb_args))
             self.write("")#newline
             self.write("def %s=(%s)" % (func_name, rb_args))
-        elif is_closure:
+        else:
             """[function closure] :
             <Python> def foo(fuga):
                          def bar(fuga):
@@ -660,13 +663,15 @@ class RB(object):
                          bar.()
                      end
             """
-            if len(self._function_args) == 0:
-                self.write("%s = lambda do" % func_name)
-            else:
-                self.write("%s = lambda do |%s|" % (func_name, rb_args))
-            self._lambda_functions.append(func_name)
-        else:
             self.write("")#newline
+            if is_closure:
+                self.write("# ToDo: closures are not supported in nestedfunctions. If closures are needed convert to lambda")
+                if len(self._function_args) == 0:
+                    self.write("# %s = lambda do" % func_name)
+                else:
+                    self.write("#%s = lambda do |%s|" % (func_name, rb_args))
+                self._lambda_functions.append(func_name)
+        
             if self._is_module and not self._class_name:
                 self._module_functions.append(func_name)
                 self.write("def self.%s(%s)" % (func_name, rb_args))
@@ -687,6 +692,7 @@ class RB(object):
 
         self.indent()
         for stmt in node.body:
+            
             self.visit(stmt)
         self.dedent()
         self.write("end")
