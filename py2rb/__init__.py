@@ -527,7 +527,9 @@ class RB(object):
                     #         "Warning : decorators are not supported : %s\n"
                     #         % self.visit(node.decorator_list[0])
                     #     )
-                    self.write("\n#@%s" % self.visit(decorator), newline=False)
+                    self.write("") # newline
+                    self.write("#@%s" % self.visit(decorator),newline=False)
+                    
             else:
                 for decorator in node.decorator_list:
                     if isinstance(decorator, ast.Name):
@@ -536,8 +538,6 @@ class RB(object):
                     if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name):
                         if decorator.func.value.id in self.blueprints:
                             blueprint = self.blueprints[decorator.func.value.id]
-                            #TODO: first is ok, escond _class_name is None
-                            
                             #not sure what needs to be done here
                             
         defaults = [None] * (
