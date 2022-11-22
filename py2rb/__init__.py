@@ -138,6 +138,7 @@ class RB(object):
     models={}
     blueprints={}
     _controllers={}
+    routes=[]
     # float(foo) => foo.to_f
     reverse_methods = {
         "type": "class",
@@ -533,6 +534,11 @@ class RB(object):
                             #print route, collect route to pregenerated route.rb
                             methods = self.methods_from_route(decorator.keywords)
                             route_annotation= f"#route: {decorator.args[0].value} , mmethods: {methods}, args: {[x.value for x in decorator.args[1:]]}"
+                            for method in methods:
+                                method = method.strip('"').lower()
+                                route = self.fix_resourceful_route(decorator.args[0].value)
+
+                                self.routes.append(f"{method} '{route}', to: '{self._class_name}#{node.name}'")
                             self.write(route_annotation)
                         #not sure what needs to be done here
                 elif self._class_name:
@@ -726,6 +732,9 @@ class RB(object):
 
         self._function.pop()
         self._function_args = []
+
+    def fix_resourceful_route(self,route):
+        return re.sub(r'\<(.*)\>',r':\1',route)
 
     def visit_Type(self, node):
         args = [self.visit(x) for x in node.args]
@@ -3180,7 +3189,7 @@ def convert_py2rb(
     v.set_using()
     header = v.read()
 
-    return (v.get_result(), header, data)
+    return (v.get_result(), header, data, v.routes)
 
 
 def convert_py2rb_write(
@@ -3243,7 +3252,7 @@ def convert_py2rb_write(
             dir_path = ""
     with open(filename, "r") as f:
         s = f.read()  # unsafe for large files!
-        rtn, header, data = convert_py2rb(
+        rtn, header, data, routes = convert_py2rb(
             s,
             dir_path,
             name_path,
@@ -3256,6 +3265,10 @@ def convert_py2rb_write(
         if require or builtins:
             output.write(header)
         output.write(data)
+        with open( os.path.join( os.path.dirname(output.name),"router.rb"),"w") as r:
+            for route in routes:
+                r.writelines(route)
+                r.write('\n')
     output.close
     return rtn
 
