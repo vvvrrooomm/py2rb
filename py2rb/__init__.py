@@ -1460,7 +1460,7 @@ class RB(object):
                     )
                     if self._verbose:
                         print("Import self._import_files: %s" % self._import_files)
-                    self.write("require_relative '%s'" % rel_path)
+                    #self.write("require_relative '%s'" % rel_path)
 
             if node.names[0].asname != None:
                 if node.names[0].name in self._import_files:
@@ -1503,7 +1503,7 @@ class RB(object):
 
             if method_key == "id":
                 if not node.names[0].name in self._imports:
-                    self.write("require '%s'" % method_value)
+                    self.write("#require '%s'" % method_value)
                     self._imports.append(node.names[0].name)
             elif method_key in ("range_map", "dict_map"):
                 for key, value in six.iteritems(method_value):
@@ -1635,7 +1635,7 @@ class RB(object):
                     )
                 if node.names[0].name != "*":
                     if path.endswith(mod_name_i + ".py"):
-                        self.write("require_relative '%s'" % rel_path)
+                        self.write("#require_relative '%s'" % rel_path)
                         dir_path = os.path.relpath(mod_name, self._dir_path)
                         if dir_path != ".":
                             self._import_files.append(
@@ -1649,17 +1649,19 @@ class RB(object):
                             )
                         break
                 if path.endswith(mod_name + ".py"):
-                    self.write("require_relative '%s'" % rel_path)
+                    # self.write("require_relative '%s'" % rel_path)
+                    
                     break
             else:
-                self.write("require_relative '%s'" % mod_name)
+                #self.write("require_relative '%s'" % mod_name)
+                pass
             base = "::".join(
                 [
                     self.capitalize(x)
                     for x in node.module.split(".")[self._base_path_count :]
                 ]
             )
-            self.write("include %s" % base)
+            self.write("#include %s" % base)
 
             if node.names[0].asname != None:
                 if node.names[0].name in self._import_files:
@@ -1720,7 +1722,7 @@ class RB(object):
         for method_key, method_value in six.iteritems(self.module_map[node.module]):
             if method_key == "id":
                 if node.module not in self._imports:
-                    self.write("require '%s'" % method_value)
+                    self.write("#require '%s'" % method_value)
                     self._imports.append(node.module)
 
         for method_key, method_value in six.iteritems(self.module_map[node.module]):
