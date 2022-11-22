@@ -25,6 +25,8 @@ def scope(func):
 class RubyError(Exception):
     pass
 
+class Blueprint (ast.ClassDef):
+    pass
 
 class RB(object):
 
@@ -132,9 +134,10 @@ class RB(object):
     ignore = {}
     mod_class_name = {}
     order_inherited_methods = {}
-
+    allnodes = None # reference to the first node visited. to allow re-anchoring
     models={}
     blueprints={}
+    _controllers={}
     # float(foo) => foo.to_f
     reverse_methods = {
         "type": "class",
@@ -413,7 +416,7 @@ class RB(object):
             return visitor(node)
 
     def visit_Module(self, node):
-        """
+        """                                                                                                                                                                                                 
         Module(stmt* body)
         """
         self._module_functions = []
@@ -507,8 +510,14 @@ class RB(object):
                                          @_x=val
                                      end
                             """
-                    if isinstance(decorator,ast.Call) and decorator.func.id == "validates" and self._class_name in self.sqlalchemy_model:
-                        pass                        
+                    if self._class_name in self.sqlalchemy_model and isinstance(decorator,ast.Call) and decorator.func.id == "validates" :
+                        pass
+                    if isinstance(decorator,ast.Call) and  isinstance(decorator.func,ast.Attribute) and decorator.func.value.id in self.blueprints:
+                        if len(node.args.args) >0 and isinstance(node.args.args[0],ast.arg) and node.args.args[0].arg == "self":
+                            pass# already has self as first arg
+                        else:
+                            node.args.args.insert(0,ast.arg(arg="self"))#inject self, this free method is treated as class methond within blueprint.
+                        # without self it is mis-detected as lambda                   
                 if not is_static and not is_property and not is_setter:
                     if self._mode == 1:
                         self.set_result(1)
@@ -521,13 +530,13 @@ class RB(object):
                     if isinstance(decorator, ast.Name):
                         if decorator.id == "classmethod":
                             is_static = True
-                    if isinstance(decorator, ast.Call):
+                    if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name):
                         if decorator.func.value.id in self.blueprints:
-                            controller_name = pluralizer.singular(decorator.func.value.id)
-                            controller_ast = self.build_class(controller_name,"ActionController")
-                            pass
-                            # set class to synthetic actioncontroller
-                            # issue asclass method. potentially create class for controller
+                            blueprint = self.blueprints[decorator.func.value.id]
+                            #TODO: first is ok, escond _class_name is None
+                            
+                            #not sure what needs to be done here
+                            
         defaults = [None] * (
             len(node.args.args) - len(node.args.defaults)
         ) + node.args.defaults
@@ -707,9 +716,10 @@ class RB(object):
         self._function.pop()
         self._function_args = []
 
-    def build_class(self,controller,parent):
-        s= ast.ClassDef(name=controller, bases=[parent])
-
+    def build_ast_for_blueprint(self,controller,parent):
+        body = []
+        s= ast.ClassDef(name=controller, bases=[ast.Name(id=parent)], body=body )
+        return s
     @scope
     def visit_ClassDef(self, node):
         """[Class Define] :
@@ -932,6 +942,8 @@ class RB(object):
         self._class_variables = []
         self._class_self_variables = []
 
+    def visit_Blueprint(self,node):
+        return self.visit_ClassDef(node)
     def get_keyword(self,stmt,keyword):
         for x in stmt.value.keywords:
             if x.arg == keyword:
@@ -1079,10 +1091,16 @@ class RB(object):
                 if isinstance(node.value, ast.Call):
                     if isinstance(node.value.func, ast.Name):
                         if node.value.func.id == "Blueprint":
-                            blueprint = node.value
-                            self.blueprints[var]={'name':blueprint.args[0].value,
-                            "args":[self.visit(x) for x in blueprint.args[1:]]
+                            # set class to synthetic actioncontroller
+                            # issue asclass method. potentially create class for controller
+                            blueprint_ast = node.value
+                            blueprint={'name':blueprint_ast.args[0].value,
+                            "args":[self.visit(x) for x in blueprint_ast.args[1:]]
                             }
+                            self.blueprints[var]=blueprint
+                            controller_name = pluralizer.plural(blueprint['name']).capitalize() + "Controller"
+                            blueprint = Blueprint(name=controller_name, bases=[ast.Name(id="ActionController")], body=None )
+                            return blueprint
                         #     # base_classes = self._classes_base_classes[node.value.func.id]
                         #     # if self.sqlalchemy_model in base_classes:
                                 
@@ -3109,6 +3127,7 @@ def convert_py2rb(
     v.mode(2)
     for m in modules:
         t = ast.parse(m)
+        v.allnodes=t
         v.visit(t)
         v.clear()  # clear self.__buffer
 
@@ -3116,6 +3135,7 @@ def convert_py2rb(
     t = ast.parse(s)
     # martin: add mode-2 round to establish context
     v.mode(2)
+    v.allnodes=t
     v.visit(t)
     v.clear()
     
