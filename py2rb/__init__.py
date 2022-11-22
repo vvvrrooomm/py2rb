@@ -727,6 +727,9 @@ class RB(object):
         self._function.pop()
         self._function_args = []
 
+    def visit_Type(self, node):
+        args = [self.visit(x) for x in node.args]
+        return f"Object.const_set( {args[0]}, Struct.new(*{args[2]}))"
     def build_ast_for_blueprint(self,controller,parent):
         body = []
         s= ast.ClassDef(name=controller, bases=[ast.Name(id=parent)], body=body )
@@ -2347,6 +2350,8 @@ class RB(object):
         """
         Call(expr func, expr* args, keyword* keywords)
         """
+        if  isinstance(node.func, ast.Name) and node.func.id=="type" and len(node.args) > 1:
+            return self.visit_Type(node)
         rb_args = [self.visit(arg) for arg in node.args]
         """ [method argument set Method Object] :
         <Python> def describe():
