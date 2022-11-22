@@ -2515,7 +2515,7 @@ class RB(object):
                         rb_args[1],
                     )
 
-        if is_static == False:
+        if is_static == False and not self._class_name:
             if (len(rb_args) != 0) and (rb_args[0] == "self"):
                 del rb_args[0]
                 self._func_args_len = len(rb_args)
