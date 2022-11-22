@@ -1936,7 +1936,12 @@ class RB(object):
                  end
                  foo(lambda{|x| print(a)}, a)
         """
-        return "lambda{|%s| %s}" % (self.visit(node.args), self.visit(node.body))
+        args = self.visit(node.args)
+        code = self.visit(node.body)
+        if len(args) > 0:
+            return "lambda{|%s| %s}" % (args, code)
+        else:
+                return "lambda{%s}" % ( code)
 
     def visit_BoolOp(self, node):
         return (" %s " % self.get_bool_op(node)).join(
