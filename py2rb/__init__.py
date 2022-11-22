@@ -423,20 +423,27 @@ class RB(object):
             <Ruby>   module Imported (base_path_count=0)
                        module Moduleb (base_path_count=1)
             """
+            #martin: modules disabled. not                                                                  
             for i in range(len(self._path)):
                 if self._verbose:
                     print("base_path_count : %s, i : %s" % (self._base_path_count, i))
                 if i < self._base_path_count:
                     continue
                 p = self._path[i]
-                if self._verbose:
-                    print("p : %s" % p)
-                self.write("module %s" % p)
-                self._is_module = True
-                self.indent()
+            #    self._is_module = True
+            #    self.indent()
+            #    if self._verbose:
+            #         print("p : %s" % p)
+            #     self.write("module %s" % p)
 
-        for stmt in node.body:
-            self.visit(stmt)
+        for i,stmt in enumerate(node.body):
+            result = self.visit(stmt)
+            if isinstance(result, Blueprint):
+                result.body = node.body[i+1:]
+                self.visit(result)
+                break
+            else:
+                pass
 
         if self._path != [""]:
             if self._module_functions:
@@ -444,11 +451,12 @@ class RB(object):
                     "module_function %s"
                     % ", ".join([":" + x for x in self._module_functions])
                 )
-            for i in range(len(self._path)):
-                if i < self._base_path_count:
-                    continue
-                self.dedent()
-                self.write("end")
+            # martin: modules disabled
+            # for i in range(len(self._path)):
+            #     if i < self._base_path_count:
+            #         continue
+            #     self.dedent()
+            #     self.write("end")
 
     @scope
     def visit_FunctionDef(self, node):
