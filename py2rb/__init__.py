@@ -533,7 +533,7 @@ class RB(object):
                         if decorator.func.attr == "route":
                             #print route, collect route to pregenerated route.rb
                             methods = self.methods_from_route(decorator.keywords)
-                            route_annotation= f"#route: {decorator.args[0].value} , mmethods: {methods}, args: {[x.value for x in decorator.args[1:]]}"
+                            route_annotation= f"# route: {decorator.args[0].value} , mmethods: {methods}, args: {[x.value for x in decorator.args[1:]]}"
                             for method in methods:
                                 method = method.strip('"').lower()
                                 route = self.fix_resourceful_route(decorator.args[0].value)
@@ -543,7 +543,7 @@ class RB(object):
                         #not sure what needs to be done here
                 elif self._class_name:
                     if not is_static and not is_property and not is_setter:
-                        self.write("#@%s" % self.visit(decorator))
+                        self.write("# @%s" % self.visit(decorator))
                     # if self._mode == 1:
                     #     self.set_result(1)
                     #     sys.stderr.write(
@@ -680,7 +680,7 @@ class RB(object):
                 if len(self._function_args) == 0:
                     self.write("# %s = lambda do" % func_name)
                 else:
-                    self.write("#%s = lambda do |%s|" % (func_name, rb_args))
+                    self.write("# %s = lambda do |%s|" % (func_name, rb_args))
                 self._lambda_functions.append(func_name)
         
             if self._is_module and not self._class_name:
@@ -882,11 +882,11 @@ class RB(object):
                         # direct definition 
                         if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Name) and stmt.value.func.id == "Column":
                             self._class_sqlalchemy_props[node.name] += (var,)
-                            self.write("#%s = %s" % (var, value))
+                            self.write("# %s = %s" % (var, value))
                         # # namespaced sqlalchemy objects, accessed via sqlalchemy object, eg: `db=SlqAlchemy(); db.Column(db.String())`
                         # if isinstance(stmt.value, ast.Call) and  isinstance(stmt.value.func, ast.Attribute) and stmt.value.func.attr == "Column":
                         #     self._class_sqlalchemy_props[node.name] += (var,)
-                        #     self.write("#%s = %s" % (var, value))
+                        #     self.write("# %s = %s" % (var, value))
                         
                         if isinstance( stmt.value , ast.Call) and isinstance( stmt.value.func , ast.Name) and stmt.value.func.id == "relationship":
                             child_class,rest = self.construct_has_many(stmt.value)
@@ -895,7 +895,7 @@ class RB(object):
                                 if "back_populates" in [x.arg for x in stmt.value.keywords]:
                                 #bidi case
                                     child_class = pluralizer.plural(child_class) if child_class else ""
-                                    self.write(f"#ToDo: could be a one-to-one. check if `has_one` was meant")
+                                    self.write(f"# ToDo: could be a one-to-one. check if `has_one` was meant")
                                     self.write(f"has_many :{child_class} #{rest}")
                                 elif self.get_keyword(stmt,"uselist") and self.get_keyword(stmt,"uselist").value == False :
                                     child_class = pluralizer.plural(child_class) if child_class else ""
@@ -1530,7 +1530,7 @@ class RB(object):
 
             if method_key == "id":
                 if not node.names[0].name in self._imports:
-                    self.write("#require '%s'" % method_value)
+                    self.write("# require '%s'" % method_value)
                     self._imports.append(node.names[0].name)
             elif method_key in ("range_map", "dict_map"):
                 for key, value in six.iteritems(method_value):
@@ -1662,7 +1662,7 @@ class RB(object):
                     )
                 if node.names[0].name != "*":
                     if path.endswith(mod_name_i + ".py"):
-                        self.write("#require_relative '%s'" % rel_path)
+                        self.write("# require_relative '%s'" % rel_path)
                         dir_path = os.path.relpath(mod_name, self._dir_path)
                         if dir_path != ".":
                             self._import_files.append(
@@ -1688,7 +1688,7 @@ class RB(object):
                     for x in node.module.split(".")[self._base_path_count :]
                 ]
             )
-            self.write("#include %s" % base)
+            self.write("# include %s" % base)
 
             if node.names[0].asname != None:
                 if node.names[0].name in self._import_files:
@@ -1749,7 +1749,7 @@ class RB(object):
         for method_key, method_value in six.iteritems(self.module_map[node.module]):
             if method_key == "id":
                 if node.module not in self._imports:
-                    self.write("#require '%s'" % method_value)
+                    self.write("# require '%s'" % method_value)
                     self._imports.append(node.module)
 
         for method_key, method_value in six.iteritems(self.module_map[node.module]):
