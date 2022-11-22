@@ -472,9 +472,10 @@ class RB(object):
         is_closure = False
         is_property = False
         is_setter = False
+        self.write("")#newline
         if node.decorator_list:
-            if self._class_name:
-                for decorator in node.decorator_list:
+            for decorator in node.decorator_list:
+                if self._class_name:
                     if isinstance(decorator, ast.Name):
                         if decorator.id == "classmethod":
                             is_static = True
@@ -519,27 +520,31 @@ class RB(object):
                             pass# already has self as first arg
                         else:
                             node.args.args.insert(0,ast.arg(arg="self"))#inject self, this free method is treated as class methond within blueprint.
-                        # without self it is mis-detected as lambda                   
-                if not is_static and not is_property and not is_setter:
+                        # without self it is mis-detected as lambda  
+                else:
+                    if isinstance(decorator, ast.Name):
+                        if decorator.id == "classmethod":
+                            is_static = True
+                #blueprint decorators are processed in both cases. class method and free method
+                if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name):
+                    if decorator.func.value.id in self.blueprints:
+                        blueprint = self.blueprints[decorator.func.value.id]
+                        if decorator.func.attr == "route":
+                            #print route, collect route to pregenerated route.rb
+                            methods = self.methods_from_route(decorator.keywords)
+                            route_annotation= f"#route: {decorator.args[0].value} , mmethods: {methods}, args: {[x.value for x in decorator.args[1:]]}"
+                            self.write(route_annotation)
+                        #not sure what needs to be done here
+                elif self._class_name:
+                    if not is_static and not is_property and not is_setter:
+                        self.write("#@%s" % self.visit(decorator))
                     # if self._mode == 1:
                     #     self.set_result(1)
                     #     sys.stderr.write(
                     #         "Warning : decorators are not supported : %s\n"
                     #         % self.visit(node.decorator_list[0])
                     #     )
-                    self.write("") # newline
-                    self.write("#@%s" % self.visit(decorator),newline=False)
                     
-            else:
-                for decorator in node.decorator_list:
-                    if isinstance(decorator, ast.Name):
-                        if decorator.id == "classmethod":
-                            is_static = True
-                    if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name):
-                        if decorator.func.value.id in self.blueprints:
-                            blueprint = self.blueprints[decorator.func.value.id]
-                            #not sure what needs to be done here
-                            
         defaults = [None] * (
             len(node.args.args) - len(node.args.defaults)
         ) + node.args.defaults
@@ -649,7 +654,7 @@ class RB(object):
                 # self.write("def self.%s=(%s)" % (func_name, rb_args))
             # else:
             #    self.write("def %s=(%s)" % (func_name, rb_args))
-            self.write("")#newline
+            
             self.write("def %s=(%s)" % (func_name, rb_args))
         else:
             """[function closure] :
@@ -663,7 +668,7 @@ class RB(object):
                          bar.()
                      end
             """
-            self.write("")#newline
+            
             if is_closure:
                 self.write("# ToDo: closures are not supported in nestedfunctions. If closures are needed convert to lambda")
                 if len(self._function_args) == 0:
@@ -927,9 +932,11 @@ class RB(object):
 
         #both instance and class variables are emitted as instance variables
         #for compatiblity with python they are made accessible for read&write
+        with_accessor=[]
         for instance_var in set(self._class_self_variables + self._class_variables): #unique only
             if not instance_var.startswith("_"):
-                self.write(f"attr_accessor :{instance_var}")
+                with_accessor+=(f":{instance_var}",)
+        self.write(f"attr_accessor {', '.join(with_accessor)}") if len(with_accessor) > 0 else True
 
         for func in self._self_functions:
             if func in self.attribute_map.keys():
@@ -946,6 +953,14 @@ class RB(object):
 
     def visit_Blueprint(self,node):
         return self.visit_ClassDef(node)
+    
+    def methods_from_route(self,keywords):
+        result = []
+        for k in keywords:
+            if k.arg == "methods":
+                for m in k.value.elts:
+                    result += (self.visit(m),)
+        return result
     def get_keyword(self,stmt,keyword):
         for x in stmt.value.keywords:
             if x.arg == keyword:
