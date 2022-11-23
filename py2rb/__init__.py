@@ -6,7 +6,7 @@ import six
 import inspect
 import sys
 import os.path
-from optparse import OptionParser
+import argparse
 from . import formater
 import re
 import yaml
@@ -3274,15 +3274,11 @@ def convert_py2rb_write(
 
 
 def main():
-    parser = OptionParser(
-        usage="%prog [options] filename.py\n"
-        + "    or %prog [-w [-f]] [-(r|b)] [-v] filename.py\n"
-        + "    or %prog -p foo/bar/ -m [-w [-f]] [-(r|b)] [-v] foo/bar/filename.py\n"
-        + "    or %prog -l lib_store_directory/ [-f]",
+    parser = argparse.ArgumentParser(
         description="Python to Ruby compiler.",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-w",
         "--write",
         action="store_true",
@@ -3290,7 +3286,7 @@ def main():
         help="write output *.py => *.rb",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-f",
         "--force",
         action="store_true",
@@ -3299,7 +3295,7 @@ def main():
         help="force write output to OUTPUT",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -3308,7 +3304,7 @@ def main():
         help="verbose option to get more information.",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-s",
         "--silent",
         action="store_true",
@@ -3317,7 +3313,7 @@ def main():
         help="silent option that does not output detailed information.",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-r",
         "--include-require",
         action="store_true",
@@ -3326,7 +3322,7 @@ def main():
         help="require py2rb/builtins/module.rb library in the output",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-b",
         "--include-builtins",
         action="store_true",
@@ -3335,7 +3331,7 @@ def main():
         help="include py2rb/builtins/module.rb library in the output",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-p",
         "--base-path",
         action="store",
@@ -3344,17 +3340,17 @@ def main():
         help="set default module target path",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-c",
         "--base-path-count",
         action="store",
         dest="base_path_count",
-        type="int",
+        type=int,
         default=0,
         help="set default module target path nest count",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-m",
         "--module",
         action="store_true",
@@ -3363,7 +3359,7 @@ def main():
         help="convert all local import module files of specified Python file. *.py => *.rb",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "-l",
         "--store-library-path",
         action="store",
@@ -3372,7 +3368,7 @@ def main():
         help="store py2rb/builtins/module.rb library file in the specified directory",
     )
     
-    parser.add_option(
+    parser.add_argument(
         "-o",
         "--out-dir",
         action="store",
@@ -3380,8 +3376,9 @@ def main():
         default=False,
         help="output dir",
     )
+    parser.add_argument('filename')
     
-    options, args = parser.parse_args()
+    options = parser.parse_args()
 
     if options.store_library_path:
         if not os.path.isdir(options.store_library_path):
@@ -3404,19 +3401,13 @@ def main():
         sys.stderr.write("OK :  %s file was stored.\n" % output)
         exit(0)
 
-    if len(args) == 0:
-        parser.print_help()
-        exit(1)
-
-    filename = args[0]
-
     # base_dir_path : target python file dir path
     # filename: tests/modules/classname.py
     #  -> base_dir_path: tests/modules/
     if options.base_path:
         base_dir_path = options.base_path
     else:
-        base_dir_path = os.path.dirname(filename)
+        base_dir_path = os.path.dirname(options.filename)
     if options.verbose:
         print("base_dir_path: %s" % base_dir_path)
     mods = {}
@@ -3517,7 +3508,7 @@ def main():
         return
 
     # Get all the local import module file names of the target python file
-    get_mod_path(filename)
+    get_mod_path(options.filename)
 
     # Example:
     # tests/modules/classname.py : from modules.moda import ModA     => require_relative 'modules/moda' (Convert using AST)
