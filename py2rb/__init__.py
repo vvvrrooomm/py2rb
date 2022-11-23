@@ -267,7 +267,7 @@ class RB(object):
         self.write("")
 
     def __init__(
-        self, path="", dir_path="", base_path_count=0, mod_paths={}, verbose=False
+        self, path="", dir_path="", base_path_count=0, mod_paths={}, verbose=False, options={}
     ):
         self._verbose = verbose
         self._mode = 0  # Error Stop Mode : 0:stop(defalut), 1:warning(for all script mode), 2:no error(for module mode)
@@ -363,6 +363,10 @@ class RB(object):
         self._imports = []
         self._call = False
         self._conv = True  # use YAML convert case.
+        self.sqlalchemy_model=options.sqlalchemy_model
+        self.api_path=options.api_path
+        self.rails_model=options.rails_model
+        self.roles_decorator=options.roles_decorator
 
     def new_dummy(self):
         dummy = "__dummy%d__" % self.dummy
@@ -3149,6 +3153,7 @@ def convert_py2rb(
     mod_paths={},
     no_stop=False,
     verbose=False,
+    options={},
 ):
     """
     Takes Python code as a string 's' and converts this to Ruby.
@@ -3203,6 +3208,7 @@ def convert_py2rb_write(
     force=None,
     no_stop=False,
     verbose=False,
+    options={},
 ):
     if output:
         if not force:
@@ -3261,6 +3267,7 @@ def convert_py2rb_write(
             mod_paths,
             no_stop=no_stop,
             verbose=verbose,
+            options={},
         )
         if require or builtins:
             output.write(header)
@@ -3379,6 +3386,15 @@ def main():
     parser.add_argument('filename')
     
     options = parser.parse_args()
+
+    yaml_config = os.path.join(
+        os.path.abspath(os.path.dirname(sys.argv[0])), "config.yaml"
+    )
+
+    for config_path in glob.glob(yaml_config):
+        with open(config_path, "r") as f:
+            # small hack to include config
+            options.__dict__.update(yaml.load(f, Loader=yaml.FullLoader))
 
     if options.store_library_path:
         if not os.path.isdir(options.store_library_path):
@@ -3552,6 +3568,7 @@ def main():
             force=options.force,
             no_stop=True,
             verbose=options.verbose,
+            options=options,
         )
         if not options.silent:
             if options.mod or output:
