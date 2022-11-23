@@ -2365,6 +2365,8 @@ class RB(object):
         """
         if  isinstance(node.func, ast.Name) and node.func.id=="type" and len(node.args) > 1:
             return self.visit_Type(node)
+        if  isinstance(node.func, ast.Name) and node.func.id=="render_template" and len(node.args) > 1:
+            return self.visit_Type(node)
         rb_args = [self.visit(arg) for arg in node.args]
         """ [method argument set Method Object] :
         <Python> def describe():
